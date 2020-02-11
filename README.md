@@ -28,13 +28,13 @@
 8) Final Set Up
 
 
-## Modifying the Pi for Enterprise Networking
+## Modifying the Pi for Enterprise Networking (Incomplete)
 
 There is a good chance that the Pi does not play nice with your institution's wireless network out of the box. Typically, this is a result of the institution making use of an Enterprise network, which requires a set of certificates that allow you to connect, in addition to a username and password. Every institution is different, so I recommend, if you're having trouble connecting, that you contact your IT department for assistance. If you're adventurous, more knowledgable about this kind of thing, or just curious, you can try the following, which worked for me. Alternatively, feel free to omit the wireless component all together and skip this if using ethernet.
 
 First though, please begin the security process outlined below. You should complete all the steps that can be done without an internet connection, up to the point where you have successfully created a new user profile, at which point you will be directed to return here.
 
-## Securing the Pi for Institutional Use
+## Securing the Pi for Institutional Use (Incomplete/Under Review)
 
 If you are planning to do this project, I strongly encourage you to reference the Standard Operating Procedures for your institution, when it comes to adding devices to the network. You may think "This is a simple Raspberry Pi project, who cares about hacking my single board computer?" and you've got a point, because most people are not hackers, and most hackers aren't interested in your project. That said, they may be interested in what your project can enable them to access once compromised. Take, for example, [this article](https://www.engadget.com/2019/06/20/nasa-jpl-cybersecurity-weaknesses/) detailing how NASA's Jet Propulsion Laboratory was breached via an unsecured Raspberry Pi. I don't mean to fear monger, but it is important that you consider the bigger picture, as you are adding a device to a larger network, which is almost certain to have more important devices and data attached to it than the Pi itself.
 
