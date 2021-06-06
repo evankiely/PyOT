@@ -1,6 +1,21 @@
 # PassiveThermostat
 ### Work with Nature to Maintain a Pre-Set Temperature & Avoid Unnecessary Heating/Cooling
 
+**About**
+The intent of this project is to enable you to regulate the temperature of a given space, relative to some other space, and do so without using additional energy. In the most common use case, when to open or close windows/vents. The specific logic relies on comparing the [apparent temperature](https://en.wikipedia.org/wiki/Apparent_temperature) of the spaces to a desired set point and to one another. This logic is outlined in more detail below.
+
+When to open windows:
+ - If the temperature outside is above the target, and the temperature inside is below the target
+ - If the temperature outside is below the target, and the temperature inside is above the target
+ - If the temperature outside is above the target, and the temperature inside is above the temperature outside
+ - If the temperature outside is below the target, and the temperature inside is below the temperature outside
+
+When to close windows:
+ - If the temperature inside is above the target, and the temperature inside is below the temperature outside
+ - If the temperature inside is below the target, and the temperature inside is above the temperature outside
+
+Notice that the last two cases under **open** windows are a bit fuzzy. They serve the purpose of approaching the target temperature, but, depending on your preference, may be better suited as a test of when to activate heating/cooling systems, as they will never actually get there.
+
 **Materials and Cost**
  - [Raspberry Pi 3 B+ Kit](https://www.pishop.us/product/raspberry-pi-3-b-plus-starter-kit/): $65
  - [DHT22 Sensor Module (Pack of 5)](https://www.amazon.com/gp/product/B01DKC2GQ0/ref=ppx_yo_dt_b_asin_title_o02_s00?ie=UTF8&psc=1): $12
@@ -205,7 +220,7 @@ set interval: [int] <-- Used to change the frequency (in Seconds) at which reque
 get current  <-- Returns current temperature and relative humidity values
 get commands <-- Returns a list of recognized commands
 get interval <-- Returns the current interval value
-get feels like <-- Returns the [apparent temperature](https://en.wikipedia.org/wiki/Apparent_temperature) and relative humidity values
+get feels like <-- Returns the apparent temperature and relative humidity values
 
 add recipient: [contact] <-- Adds the provided contact to the Recipient list
 add malfunction: [contact] <-- Adds the provided contact to the Malfunction list
