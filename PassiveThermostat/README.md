@@ -22,7 +22,7 @@ Notice that the last two cases under **open** windows are a bit fuzzy. They serv
  - [4 Wire Ribbon Cable (20 Meters)](https://www.amazon.com/65-6-Color-Extension-Cable-Strip/dp/B00L67YQ9W/ref=sr_1_3?keywords=3+wire+ribbon+cable&qid=1579014504&sr=8-3): $10
  - [Soldering Iron and Solder](https://www.amazon.com/Soldering-Kit-Temperature-Desoldering-Electronics/dp/B07XKZVG8Z/ref=sr_1_9?keywords=soldering+iron&qid=1580765871&sr=8-9): $11
 
- **Total: $98** -- At time of publication.
+ **Total: $98** -- As of 06/06/2021.
 
 **Note:** This script was written to work with, and has only been tested using, the DHT11 and DHT22 temperature and humidity sensors. That said, any sensor with an analogous pin out and similar library should be compatible with what has already been written. I go into more detail on this point in Section 4.
 
