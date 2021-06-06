@@ -228,7 +228,7 @@ drop recipient: [contact] <-- Drops the provided contact from the Recipient list
 drop malfunction: [contact] <-- Drops the provided contact from the Malfunction list
 ```
 
-Multiple commands can be sent at once by including a return between them. Notice that the set and add/drop commands require ": " followed by user input. In the case of the set commands, the input expected is an integer value. For add/drop commands, it is a string which is evaluated with regex to ensure that it is likely a valid email address. Add and drop alterations are saved in the previously mentioned Contacts.csv, and so will persist in the event of power outage, etc.
+Multiple commands can be sent at once by including a return between them. Notice that the set and add/drop commands require ": " followed by user input. In the case of the set commands, the input expected is an integer value. For add/drop commands, it is a string which is evaluated with regex to ensure that it is likely a valid email address. Add and drop alterations are saved in the previously mentioned contacts.csv, and so will persist in the event of power outage, etc.
 
 **Disclaimer: There is not currently a process in place for a user added to these lists to be notified and confirm that they wish to be added. They may, however, drop themselves using the commands above. Even so, don't add people without their knowledge...**
 
