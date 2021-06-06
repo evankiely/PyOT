@@ -1,4 +1,4 @@
-# Written by Evan J. Kiely for the Gilbert-Ross Lab, Emory University, January 2020
+# Written by Evan Kiely for the Gilbert-Ross Lab, Emory University, January 2020
 # For more information, please see here: https://github.com/evanjkiely/SmartLab
 # Licensed under the GNU General Public License v3.0
 
@@ -53,7 +53,7 @@ class Equipment:
                 self.statusNominal = False
                 # Runs timer to prevent malfunctioning equipment/sensor from being checked, and resets it to checkable after the timer has expired
                 antiSpam.start()
-                return f"{self.type} : {temperature} C"
+                return f"{self.type}: {temperature} C"
 
         # If there does seem to be an issue with the sensor data, we need to try again
         elif self.increment < 25:
@@ -70,7 +70,6 @@ class Equipment:
             infiniteCall = f"The sensor monitoring your {self.type} appears to be broken."
             # Note that emergency is True here, so the emergency contact(s) will be messaged directly
             sendEmail(status, infiniteCall, True)
-
 
 # Creating variable to contain sensor type
 dht11 = Adafruit_DHT.DHT11
@@ -92,47 +91,35 @@ gmailEmail = os.environ.get("gmailUser")
 gmailPass = os.environ.get("gmailToken")
 # For (email -> text), [phone number] + ("@vtext.com", "@txt.att.net", "@msg.fi.google.com", "@messaging.sprintpcs.com", "@tmomail.net", "@sms.cricketwireless.net")
 recipientEmail = ["8005882300@msg.fi.google.com"]
-emergencyContact = ["8005882300@msg.fi.google.com"]
-
+malfunctionContact = ["8005882300@msg.fi.google.com"]
 
 # Defining the function that composes and sends emails
-def sendEmail(subject, message, emergency=False):
+def sendEmail(subject, message, malfunction=False):
 
-    if emergency is False:
-        # Setting up the notification to be sent to multiple people
-        for recipient in recipientEmail:
-            # Composing and sending the notification
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = gmailEmail
+    msg.set_content(message)
 
-                msg = EmailMessage()
-                msg["Subject"] = subject
-                msg["From"] = gmailEmail
-                msg["To"] = recipient
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
 
-                smtp.login(gmailEmail, gmailPass)
-                msg.set_content(message)
-                smtp.send_message(msg)
+        smtp.login(gmailEmail, gmailPass)
 
-    else:
-        # Certain issues may require notifying the individual responsible for maintaining the equipment/sensor network itself rather than the experiments in the equipment, etc.
-        for contact in emergencyContact:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        if malfunction is False:
+            msg["To"] = recipientEmail
+            smtp.send_message(msg)
 
-                msg = EmailMessage()
-                msg["Subject"] = subject
-                msg["From"] = gmailEmail
-                msg["To"] = contact
-
-                smtp.login(gmailEmail, gmailPass)
-                msg.set_content(message)
-                smtp.send_message(msg)
-
+        else:
+            # Certain issues may require notifying the individual responsible for maintaining the equipment/sensor network itself rather than the experiments in the equipment, etc.
+            msg["To"] = malfunctionContact
+            smtp.send_message(msg)
 
 while True:
+
+    currentTime = time.strftime("%I:%M %p %b %d", time.localtime())
+
     # Checks if this is the first time the script is running -- if so, it's important to notify that it has just started so the user knows it is working and/or in case of unexpected reboot, etc.
     if globalBoolean is True:
-        # Creating variable to contain the current time
-        currentTime = time.strftime("%I:%M %p %b %d", time.localtime())
         status = "System Start"
         helloWorld = f"Initial boot at {currentTime}"
 
@@ -147,11 +134,9 @@ while True:
 
     # Easy way of determining if anything has been reported as out of range, otherwise, there's no need to do anything but wait until the next time we need to retrieve data
     if len(malfunctioning) > 0:
-        # Creating variable to contain the current time
-        currentTime = time.strftime("%I:%M %p %b %d", time.localtime())
         # Creating the final message contents
         status = "Potential Equipment Failure"
-        malfunctioning = f"As of {currentTime}: {malfunctioning}"
+        malfunctioning = f"As of {currentTime}: {', '.join(malfunctioning)}"
 
         # calling email function
         sendEmail(status, malfunctioning)
