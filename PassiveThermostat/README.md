@@ -14,7 +14,7 @@ When to close windows:
  - If the temperature inside is above the target, and the temperature inside is below the temperature outside
  - If the temperature inside is below the target, and the temperature inside is above the temperature outside
 
-Notice that the last two cases under **open** windows are a bit fuzzy. They serve the purpose of approaching the target temperature, but, depending on your preference, may be better suited as a test of when to activate heating/cooling systems, as they will never actually get there.
+Notice that the last two cases under **open** windows are a bit fuzzy. They serve the purpose of approaching the target temperature, but, depending on your preference, may be better suited as a test of when to activate heating/cooling systems.
 
 **Materials and Cost**
  - [Raspberry Pi 3 B+ Kit](https://www.pishop.us/product/raspberry-pi-3-b-plus-starter-kit/): $65
