@@ -1,5 +1,5 @@
 # Written by Evan Kiely for the Gilbert-Ross Lab, Emory University, January 2020
-# For more information, please see here: https://github.com/evanjkiely/SmartLab
+# For more information, please see here: https://github.com/evankiely/PyOT/tree/master/SmartLab
 # Licensed under the GNU General Public License v3.0
 
 # Importing dependencies

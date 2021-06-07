@@ -32,7 +32,7 @@ class Sensor:
         self.statusNominal = True
 
     # Main function of the sensor class - does what it sounds like, returns relevant values, and notifies if a given sensor appears to have failed
-    def getTemp(self, useHI=True, wantRH=False):
+    def getTemp(self, useHI=True, wantRH=False, wantAll=False):
         # No need to check temp, etc. if a malfunction was previously identified
         if self.statusNominal is False:
             return
@@ -45,20 +45,26 @@ class Sensor:
         if humidity is not None and temperature is not None:
 
             # converting c to f
-            temperature = (temperature * 1.8) + 32
+            temperature = round((temperature * 1.8) + 32)
+            humidity = round(humidity)
 
-            # HI = Heat Index aka Apparent Temperature
-            if useHI:
+            if wantAll:
+                return (temperature, self.getHI(humidity, temperature), humidity)
+
+            else:
+
+                # HI = Heat Index aka Apparent Temperature
+                if useHI:
+
+                    if wantRH:
+                        return (self.getHI(humidity, temperature), humidity)
+
+                    return self.getHI(humidity, temperature)
 
                 if wantRH:
-                    return (self.getHI(humidity, temperature), humidity)
+                    return (temperature, humidity)
 
-                return self.getHI(humidity, temperature)
-
-            if wantRH:
-                return (round(temperature), humidity)
-
-            return round(temperature)
+                return temperature
     
         # If there does seem to be an issue with the sensor data, we need to try again
         elif self.increment < 30:
@@ -105,6 +111,7 @@ class Thermostat:
         self.interval = 30
         self.isOpen = False
         self.outputDir = "./downloads"
+        self.logDir = "dataLog.csv"
         self.recognizedCommands = [
             
             "set target", "set interval", "get current", 
@@ -120,6 +127,14 @@ class Thermostat:
 
         if not os.path.exists(self.outputDir):
             os.makedirs(self.outputDir)
+
+        if not os.path.exists(self.logDir):
+            columns = ["Hour", "Minute", "Year", "Month", "Day", "InternalTemp", "InternalHI", "InternalRH", "ExternalTemp", "ExternalHI", "ExternalRH"]
+            self.dataLog = pd.DataFrame(columns=columns)
+            self.dataLog.to_csv(self.logDir, index=False)
+
+        else:
+            self.dataLog = pd.read_csv(self.logDir)
 
     def getInput(self):
 
@@ -209,7 +224,7 @@ class Thermostat:
                         externalVals = self.external.getTemp(useHI=False, wantRH=True)
                         tempInternal, rhInternal = internalVals
                         tempExternal, rhExternal = externalVals
-                        message = f"As of {currentTime}, temperature and RH outside: {tempExternal}f, {int(rhExternal)}%, and inside: {tempInternal}f, {int(rhInternal)}% with target temperature of {self.targetTemp}f"
+                        message = f"As of {currentTime}, temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                         sendEmail(subject, message)
 
                     elif command == "get commands":
@@ -264,7 +279,7 @@ class Thermostat:
                                 sendEmail(subject, message)
 
                             elif "malfunction" in command:
-                                self.contactsDF = self.contactsDF.append({"Contact": val, "Malfunction": 1}, ignore_index=True, sort=False)
+                                self.contactsDF = self.contactsDF.append({"Contact": val, "Malfunction": 1}, ignore_index=True)
                                 self.contactsDF.to_csv(contactPath, index=False)
                                 message = f"Command ({command}) completed successfully"
                                 sendEmail(subject, message)
@@ -344,7 +359,31 @@ class Thermostat:
 
                 sendEmail(closeStatus, closeNotification)
                 self.isOpen = False
-            
+
+    def logData(self, logTime):
+
+        internalTemp, internalHI, internalRH = self.internal.getTemp(wantAll=True)
+        externalTemp, externalHI, externalRH = self.external.getTemp(wantAll=True)
+        splitLog = logTime.split(" ")
+        splitLog[0] = splitLog[0].split(":")
+
+        data = {
+            "Hour": splitLog[0][0],
+            "Minute": splitLog[0][1],
+            "Year": splitLog[3],
+            "Month": splitLog[1],
+            "Day": splitLog[2],
+            "InternalTemp": internalTemp,
+            "InternalHI": internalHI,
+            "InternalRH": internalRH,
+            "ExternalTemp": externalTemp,
+            "ExternalHI": externalHI,
+            "ExternalRH": externalRH
+        }
+
+        self.dataLog = self.dataLog.append(data, ignore_index=True)
+        self.dataLog.to_csv(self.logDir, index=False)       
+
 
 # Setting up to send emails later
 # Using environmental variables to store username and password of associated Gmail account
@@ -382,15 +421,17 @@ def sendEmail(subject, message, malfunction=False):
 
 # Creating variable to contain sensor type
 dht11 = Adafruit_DHT.DHT11
-thermo = Thermostat(68, Sensor("Internal Temperature", dht11, 4), Sensor("External Temperature", dht11, 4), contactsDF)
+thermo = Thermostat(68, Sensor("Internal Temperature", dht11, 4), Sensor("External Temperature", dht11, 17), contactsDF)
 
 # Creating a variable to track the start/boot status of the system and notify on initial invocation
 globalBoolean = True
+logTimes = ["00", "15", "30", "45"]
+logged = False
 
 while True:
 
-    currentTime = time.strftime("%I:%M", time.localtime())
-    logTime = time.strftime("%I:%M %p %b %d %Y", time.localtime()) # for future use as index of pandas df
+    currentTime = time.strftime("%I:%M %p %b %d", time.localtime())
+    minute = currentTime.split(" ")[0].split(":")[1]
 
     # Checks if this is the first time the script is running -- if so, it's important to notify that it has just started so the user knows it is working and/or in case of unexpected reboot, etc.
     if globalBoolean is True:
@@ -406,5 +447,14 @@ while True:
     thermo.getInput()
     thermo.checkTemp(currentTime)
 
+    doLog = int(minute) in logTimes
+    
+    if doLog and not logged:
+        thermo.logData(time.strftime("%H:%M %b %d %Y", time.localtime()))
+        logged = True
+    
+    elif not doLog and logged:
+        logged = False
+    
     # Set this to the interval for sensor checking -- how often to ping
     time.sleep(thermo.interval) # set to 900 for 15 min
