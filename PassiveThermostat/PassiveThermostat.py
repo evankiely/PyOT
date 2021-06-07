@@ -181,7 +181,7 @@ class Thermostat:
                     f = f.read()
                     commands = f.split("\n")
                     commands = {
-                        (item.split(": ")[0].lower() if ": " in item else item): (item.split(": ")[1] if ": " in item and len(item.split(": ")) == 2 else None)
+                        (item.split(": ")[0].lower() if ": " in item else item.lower()): (item.split(": ")[1] if ": " in item and len(item.split(": ")) == 2 else None)
                         for item in commands
                     }
 
@@ -228,8 +228,8 @@ class Thermostat:
                         sendEmail(subject, message)
 
                     elif command == "get commands":
-                        message = f"Accepted commands are {', '.join(self.recognizedCommands)}"
-                        sendEmail(subject, message)
+                        message = f"{', '.join(self.recognizedCommands)}"
+                        sendEmail("Commands", message)
 
                     elif command == "get interval":
                         message = f"Interval is currently {self.interval}s"
