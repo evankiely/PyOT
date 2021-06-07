@@ -1,5 +1,5 @@
 # Written by Evan Kiely
-# For more information, please see here: https://github.com/evankiely/SmartLab
+# For more information, please see here: https://github.com/evankiely/PyOT/tree/master/PassiveThermostat
 # Licensed under the GNU General Public License v3.0
 
 # Importing dependencies
