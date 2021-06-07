@@ -447,12 +447,13 @@ while True:
     thermo.getInput()
     thermo.checkTemp(currentTime)
 
-    doLog = int(minute) in logTimes
+    doLog = minute in logTimes
     
     if doLog and not logged:
-        thermo.logData(time.strftime("%H:%M %b %d %Y", time.localtime()))
+        thermo.logData(time.strftime("%H:%M %m %d %Y", time.localtime()))
         logged = True
     
+    #below does not permit use of adjacent numbers
     elif not doLog and logged:
         logged = False
     
