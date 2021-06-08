@@ -38,8 +38,6 @@ class Sensor:
             return
         # Pulls temperature and humidity values from the sensor
         humidity, temperature = Adafruit_DHT.read(self.sensor, self.pin)
-        # 14400 for four hours -- Prevents multiple messages about the same issue in a short period of time
-        antiSpam = Timer(30, self.reset)
 
         # Filtering for absence of sensor data
         if humidity is not None and temperature is not None:
@@ -49,7 +47,13 @@ class Sensor:
             humidity = round(humidity)
 
             if wantAll:
-                return (temperature, self.getHI(humidity, temperature), humidity)
+                tempHI = self.getHI(humidity, temperature)
+
+                if tempHI is not None:
+                    val = (temperature, tempHI, humidity)
+                    return val
+
+                return self.incrementState(useHI, wantRH, wantAll)
 
             else:
 
@@ -65,16 +69,23 @@ class Sensor:
                     return (temperature, humidity)
 
                 return temperature
-    
+        
+        return self.incrementState(useHI, wantRH, wantAll)
         # If there does seem to be an issue with the sensor data, we need to try again
-        elif self.increment < 30:
+
+    def incrementState(self, useHI, wantRH, wantAll):
+
+        if self.increment < 30:
             self.increment += 1
-            return self.getTemp(useHI=useHI, wantRH=wantRH)
+            return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
 
         # But there should be a limit to the number of times we try in case the sensor is just broken
         elif self.increment == 30:
+
             # So, we turn off the ability of the list comprehension to call this sensor
             self.statusNominal = False
+            # 14400 for four hours, 86400 for 24 -- Prevents multiple messages about the same issue in a short period of time
+            antiSpam = Timer(86400, self.reset)
             # And then start a timer to reset this, so that it doesn't require a reboot when the sensor is replaced, but also doesn't send notifications repeatedly in the mean time
             antiSpam.start()
             status = "Potential Sensor Failure"
@@ -114,10 +125,11 @@ class Thermostat:
         self.logDir = "dataLog.csv"
         self.recognizedCommands = [
             
-            "set target", "set interval", "get current", 
-            "get commands", "get interval", "add recipient", 
-            "add malfunction", "drop recipient", "drop malfunction",
-            "get feels like"
+            "set target", "set interval",
+            "get current", "get commands",
+            "get interval", "get feels like",
+            "add recipient", "add malfunction",
+            "drop recipient", "drop malfunction"
 
         ]
 
@@ -129,7 +141,14 @@ class Thermostat:
             os.makedirs(self.outputDir)
 
         if not os.path.exists(self.logDir):
-            columns = ["Hour", "Minute", "Year", "Month", "Day", "InternalTemp", "InternalHI", "InternalRH", "ExternalTemp", "ExternalHI", "ExternalRH"]
+            columns = [
+
+                "Hour", "Minute",
+                "Year", "Month", "Day",
+                "InternalTemp", "InternalHI", "InternalRH",
+                "ExternalTemp", "ExternalHI", "ExternalRH"
+                
+                ]
             self.dataLog = pd.DataFrame(columns=columns)
             self.dataLog.to_csv(self.logDir, index=False)
 
@@ -289,7 +308,7 @@ class Thermostat:
                         externalVals = self.external.getTemp(wantRH=True)
                         tempInternal, rhInternal = internalVals
                         tempExternal, rhExternal = externalVals
-                        message = f"As of {currentTime}, apparent temperature and RH outside: {tempExternal}f, {int(rhExternal)}%, and inside: {tempInternal}f, {int(rhInternal)}% with target temperature of {self.targetTemp}f"
+                        message = f"As of {currentTime}, apparent temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                         sendEmail(subject, message)
 
                     else:
@@ -317,48 +336,50 @@ class Thermostat:
         tempInternal = self.internal.getTemp() 
         tempExternal = self.external.getTemp()
 
-        if not self.isOpen:
+        if tempInternal is not None and tempExternal is not None:
 
-            openStatus = "Time to Open Windows!"
-            openNotification = f"As of {currentTime}, temperature outside is {tempExternal}f and temperature inside is {tempInternal}f, with target temperature of {self.targetTemp}f"
+            if not self.isOpen:
 
-            if tempExternal > self.targetTemp and tempInternal < self.targetTemp:
+                openStatus = "Time to Open Windows!"
+                openNotification = f"As of {currentTime}, temperature outside is {tempExternal}f and temperature inside is {tempInternal}f, with target temperature of {self.targetTemp}f"
 
-                sendEmail(openStatus, openNotification)
-                self.isOpen = True
+                if tempExternal > self.targetTemp and tempInternal < self.targetTemp:
 
-            elif tempExternal < self.targetTemp and tempInternal > self.targetTemp:
+                    sendEmail(openStatus, openNotification)
+                    self.isOpen = True
 
-                sendEmail(openStatus, openNotification)
-                self.isOpen = True
+                elif tempExternal < self.targetTemp and tempInternal > self.targetTemp:
 
-            # maybe the below two conditions send: "consider using ac/heat"?
-            # if outside more than target, and inside more than outside, outside is cooler, so opening works to approach target
-            elif tempExternal > self.targetTemp and tempInternal > tempExternal:
+                    sendEmail(openStatus, openNotification)
+                    self.isOpen = True
 
-                sendEmail(openStatus, openNotification)
-                self.isOpen = True
+                # maybe the below two conditions send: "consider using ac/heat"?
+                # if outside more than target, and inside more than outside, outside is cooler, so opening works to approach target
+                elif tempExternal > self.targetTemp and tempInternal > tempExternal:
 
-            # if outside less than target, and inside less than outside, outside is warmer, so opening works to approach target
-            elif tempExternal < self.targetTemp and tempInternal < tempExternal:
+                    sendEmail(openStatus, openNotification)
+                    self.isOpen = True
 
-                sendEmail(openStatus, openNotification)
-                self.isOpen = True
+                # if outside less than target, and inside less than outside, outside is warmer, so opening works to approach target
+                elif tempExternal < self.targetTemp and tempInternal < tempExternal:
 
-        else:
+                    sendEmail(openStatus, openNotification)
+                    self.isOpen = True
 
-            closeStatus = "Time to Close Windows!"
-            closeNotification = f"As of {currentTime}, temperature outside is {tempExternal}f and temperature inside is {tempInternal}f, with target temperature of {self.targetTemp}f"
+            else:
 
-            if tempInternal > self.targetTemp and tempInternal < tempExternal:
+                closeStatus = "Time to Close Windows!"
+                closeNotification = f"As of {currentTime}, temperature outside is {tempExternal}f and temperature inside is {tempInternal}f, with target temperature of {self.targetTemp}f"
 
-                sendEmail(closeStatus, closeNotification)
-                self.isOpen = False
+                if tempInternal > self.targetTemp and tempInternal < tempExternal:
 
-            elif tempInternal < self.targetTemp and tempInternal > tempExternal:
+                    sendEmail(closeStatus, closeNotification)
+                    self.isOpen = False
 
-                sendEmail(closeStatus, closeNotification)
-                self.isOpen = False
+                elif tempInternal < self.targetTemp and tempInternal > tempExternal:
+
+                    sendEmail(closeStatus, closeNotification)
+                    self.isOpen = False
 
     def logData(self, logTime):
 
@@ -368,6 +389,7 @@ class Thermostat:
         splitLog[0] = splitLog[0].split(":")
 
         data = {
+
             "Hour": splitLog[0][0],
             "Minute": splitLog[0][1],
             "Year": splitLog[3],
@@ -379,6 +401,7 @@ class Thermostat:
             "ExternalTemp": externalTemp,
             "ExternalHI": externalHI,
             "ExternalRH": externalRH
+
         }
 
         self.dataLog = self.dataLog.append(data, ignore_index=True)
