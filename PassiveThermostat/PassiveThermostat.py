@@ -8,6 +8,7 @@ import re
 import time
 import math
 import email
+import random
 import smtplib
 import imaplib
 import Adafruit_DHT
@@ -33,9 +34,7 @@ class Sensor:
 
     # Main function of the sensor class - does what it sounds like, returns relevant values, and notifies if a given sensor appears to have failed
     def getTemp(self, useHI=True, wantRH=False, wantAll=False):
-        # No need to check temp, etc. if a malfunction was previously identified
-        if self.statusNominal is False:
-            return
+
         # Pulls temperature and humidity values from the sensor
         humidity, temperature = Adafruit_DHT.read(self.sensor, self.pin)
 
@@ -48,12 +47,7 @@ class Sensor:
 
             if wantAll:
                 tempHI = self.getHI(humidity, temperature)
-
-                if tempHI is not None:
-                    val = (temperature, tempHI, humidity)
-                    return val
-
-                return self.incrementState(useHI, wantRH, wantAll)
+                return (temperature, tempHI, humidity)
 
             else:
 
@@ -76,7 +70,10 @@ class Sensor:
     def incrementState(self, useHI, wantRH, wantAll):
 
         if self.increment < 30:
+
             self.increment += 1
+            # giving the sensor time in case it's an issue of ping frequency overwhelming it
+            time.sleep(1)
             return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
 
         # But there should be a limit to the number of times we try in case the sensor is just broken
@@ -85,13 +82,20 @@ class Sensor:
             # So, we turn off the ability of the list comprehension to call this sensor
             self.statusNominal = False
             # 14400 for four hours, 86400 for 24 -- Prevents multiple messages about the same issue in a short period of time
-            antiSpam = Timer(86400, self.reset)
+            antiSpam = Timer(30, self.reset)
             # And then start a timer to reset this, so that it doesn't require a reboot when the sensor is replaced, but also doesn't send notifications repeatedly in the mean time
             antiSpam.start()
             status = "Potential Sensor Failure"
             infiniteCall = f"The sensor monitoring the {self.location} appears to be broken."
             # Note that malfunction is True here, so the malfunction contact(s) will be messaged directly
             sendEmail(status, infiniteCall, True)
+            
+            if wantAll:
+                return (999, 999, 999)
+            elif wantRH:
+                return (999, 999)
+            else:
+                return 999
 
     # calculations per: https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
     def getHI(self, humidityVal, tempVal):
@@ -143,8 +147,8 @@ class Thermostat:
         if not os.path.exists(self.logDir):
             columns = [
 
-                "Hour", "Minute",
                 "Year", "Month", "Day",
+                "Hour", "Minute",
                 "InternalTemp", "InternalHI", "InternalRH",
                 "ExternalTemp", "ExternalHI", "ExternalRH"
                 
@@ -153,7 +157,7 @@ class Thermostat:
             self.dataLog.to_csv(self.logDir, index=False)
 
         else:
-            self.dataLog = pd.read_csv(self.logDir)
+            self.dataLog = pd.read_csv(self.logDir, dtype=str)
 
     def getInput(self):
 
@@ -181,7 +185,7 @@ class Thermostat:
 
                     if part.get_content_maintype() != 'multipart' and part.get('Content-Disposition') is not None:
                         
-                        open(self.outputDir + '/' + part.get_filename(), 'wb').write(part.get_payload(decode=True))
+                        open(f"{self.outputDir}/{random.randint(0, 10000)}_{part.get_filename()}", 'wb').write(part.get_payload(decode=True))
         
         self.removeMail(mail)
 
@@ -239,10 +243,8 @@ class Thermostat:
                         sendEmail(subject, message)
 
                     elif command == "get current":
-                        internalVals = self.internal.getTemp(useHI=False, wantRH=True) 
-                        externalVals = self.external.getTemp(useHI=False, wantRH=True)
-                        tempInternal, rhInternal = internalVals
-                        tempExternal, rhExternal = externalVals
+                        tempInternal, rhInternal = self.internal.getTemp(useHI=False, wantRH=True) 
+                        tempExternal, rhExternal = self.external.getTemp(useHI=False, wantRH=True)
                         message = f"As of {currentTime}, temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                         sendEmail(subject, message)
 
@@ -390,11 +392,11 @@ class Thermostat:
 
         data = {
 
-            "Hour": splitLog[0][0],
-            "Minute": splitLog[0][1],
             "Year": splitLog[3],
             "Month": splitLog[1],
             "Day": splitLog[2],
+            "Hour": splitLog[0][0],
+            "Minute": splitLog[0][1],
             "InternalTemp": internalTemp,
             "InternalHI": internalHI,
             "InternalRH": internalRH,
