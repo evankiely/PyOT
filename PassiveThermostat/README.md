@@ -16,6 +16,10 @@ When to close windows:
 
 Notice that the last two cases under **open** windows are a bit fuzzy. They serve the purpose of approaching the target temperature, but, depending on your preference, may be better suited as a test of when to activate heating/cooling systems.
 
+Known issues:
+ - If you are very actively communicating with the thermostat via commands, as described below, and you notice that it stops responding to your messages, it is likely that your messages have been shunted to the spam folder of the gmail account used by the thermostat. To remediate this, go to the spam folder, select all the messages from the erroneously filtered sender, then select the Not Spam button. This should resolve and prevent the issue moving forward
+ - Using email -> sms for notifications (and vice versa for commands) is simple, and free for both an unlimited number of messages to/from the device, and for an unlimited number of contacts. However, the timing of these messages is not always consistent. That is, the program may send a notification via gmail at 9:00 am, but you may not recieve it until much later. This gets especially confusing due to lack of consistency -- a message sent after some other message may arrive before the first one. To help with this, most messages will be time/date stamped. If you have already encountered and remediated the issue above regarding spam filtering, it is likely that messages are just delayed, not diverted.
+
 **Materials and Cost**
  - [Raspberry Pi 3 B+ Kit](https://www.pishop.us/product/raspberry-pi-3-b-plus-starter-kit/): $65
  - [DHT22 Sensor Module (Pack of 5)](https://www.amazon.com/gp/product/B01DKC2GQ0/ref=ppx_yo_dt_b_asin_title_o02_s00?ie=UTF8&psc=1): $12
