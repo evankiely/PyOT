@@ -1,7 +1,7 @@
 # PassiveThermostat
 ### Work with Nature to Maintain a Pre-Set Temperature & Avoid Unnecessary Heating/Cooling
 
-**About**
+**About**:
 The intent of this project is to enable you to regulate the temperature of a given space, relative to some other space, and do so without using additional energy. In the most common use case, when to open or close windows/vents. The specific logic relies on comparing the [apparent temperature](https://en.wikipedia.org/wiki/Apparent_temperature) of the spaces to a desired set point and to one another. This logic is outlined in more detail below.
 
 When to open windows:
