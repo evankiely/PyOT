@@ -69,7 +69,7 @@ class Sensor:
 
     def incrementState(self, useHI, wantRH, wantAll):
 
-        if self.increment < 30:
+        if self.increment < 50:
 
             self.increment += 1
             # giving the sensor time in case it's an issue of ping frequency overwhelming it
@@ -77,19 +77,21 @@ class Sensor:
             return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
 
         # But there should be a limit to the number of times we try in case the sensor is just broken
-        elif self.increment == 30:
+        elif self.increment == 50:
 
-            # So, we turn off the ability of the list comprehension to call this sensor
-            self.statusNominal = False
-            # 14400 for four hours, 86400 for 24 -- Prevents multiple messages about the same issue in a short period of time
-            antiSpam = Timer(30, self.reset)
-            # And then start a timer to reset this, so that it doesn't require a reboot when the sensor is replaced, but also doesn't send notifications repeatedly in the mean time
-            antiSpam.start()
-            status = "Potential Sensor Failure"
-            infiniteCall = f"The sensor monitoring the {self.location} appears to be broken."
-            # Note that malfunction is True here, so the malfunction contact(s) will be messaged directly
-            sendEmail(status, infiniteCall, True)
-            
+            if self.statusNominal:
+                # So, we turn off the ability of the list comprehension to call this sensor
+                self.statusNominal = False
+                # 14400 for four hours, 86400 for 24 -- Prevents multiple messages about the same issue in a short period of time
+                antiSpam = Timer(300, self.reset)
+                # And then start a timer to reset this, so that it doesn't require a reboot when the sensor is replaced, but also doesn't send notifications repeatedly in the mean time
+                antiSpam.start()
+                currentTime = time.strftime("%I:%M %p %b %d", time.localtime())
+                status = "Potential Sensor Failure"
+                infiniteCall = f"The sensor monitoring the {self.location} appears to be broken as of {currentTime}"
+                # Note that malfunction is True here, so the malfunction contact(s) will be messaged directly
+                sendEmail(status, infiniteCall, True)
+                
             if wantAll:
                 return (999, 999, 999)
             elif wantRH:
@@ -165,10 +167,11 @@ class Thermostat:
         mail.login(gmailEmail, gmailPass)
         status, messages = mail.select("INBOX")
         (retcode, emailnums) = mail.search(None,'(UNSEEN)') # "(BODY.PEEK[])" to avoid marking read?
+        emailnums = emailnums[0].split()
 
-        if retcode == 'OK':
+        if retcode == 'OK' and len(emailnums) > 0:
 
-            for emailnum in emailnums[0].split():
+            for emailnum in emailnums:
 
                 typ, data = mail.fetch(emailnum,'(RFC822)')
                 raw_email = data[0][1]
@@ -185,140 +188,151 @@ class Thermostat:
 
                     if part.get_content_maintype() != 'multipart' and part.get('Content-Disposition') is not None:
                         
+                        # could use %f with datetime to get milliseconds and avoid potentially reusing same "random" number by accident, and maintain file ordering -> see: https://stackoverflow.com/questions/6677332/using-f-with-strftime-in-python-to-get-microseconds
                         open(f"{self.outputDir}/{random.randint(0, 10000)}_{part.get_filename()}", 'wb').write(part.get_payload(decode=True))
-        
-        self.removeMail(mail)
+                
+            if len(os.listdir(self.outputDir)) > 0:
+                
+                commands = [item for item in os.listdir(self.outputDir) if item.endswith(".txt")]
+                subject = "Confirmation"
+                error = "Error"
 
-        if len(os.listdir(self.outputDir)) > 0:
-            
-            commands = [item for item in os.listdir(self.outputDir) if item.endswith(".txt")]
-            subject = "Confirmation"
-            error = "Error"
+                for item in commands:
 
-            for item in commands:
+                    path = f"{self.outputDir}/{item}"
 
-                path = f"{self.outputDir}/{item}"
+                    with open(path, "r") as f:
 
-                with open(path, "r") as f:
+                        f = f.read()
 
-                    f = f.read()
-                    commands = f.split("\n")
-                    commands = {
-                        (item.split(": ")[0].lower() if ": " in item else item.lower()): (item.split(": ")[1] if ": " in item and len(item.split(": ")) == 2 else None)
-                        for item in commands
-                    }
+                        if "\n" in f:
+                            commands = set(f.split("\n"))
 
-                for command, val in zip(commands.keys(), commands.values()):
+                        elif ", " in f:
+                            commands = set(f.split(", "))
 
-                    if "set" in command and val is None:
-                        message = f"Set commands require an integer assignment value, such as '{command}: 68'"
-                        sendEmail(error, message)
-                        continue
+                        else:
+                            commands = [f]
 
-                    elif ("add" in command or "drop" in command) and val is None:
-                        message = f"Add/Drop commands require contact information, such as '{command}: contact'"
-                        sendEmail(error, message)
-                        continue
+                        commands = {
+                            (item.split(": ")[0].lower() if ": " in item else item.lower()): (item.split(": ")[1] if ": " in item and len(item.split(": ")) == 2 else None)
+                            for item in commands
+                        }
 
-                    elif val is not None and "add" not in command and "drop" not in command:
+                    for command, val in zip(commands.keys(), commands.values()):
 
-                        try:
-                            val = int(val)
-
-                        except:
-                            message = f"Input ({command}: {val}) could not be coerced to integer"
+                        if "set" in command and val is None:
+                            message = f"Set commands require an integer assignment value, such as '{command}: 68'"
                             sendEmail(error, message)
                             continue
 
-                    # 45 - 90 is an arbitrary choice, but figured it would cover most normal home temperatures
-                    if command == "set target" and val in range(45, 90):
-                        self.targetTemp = val
-                        message = f"Target Temperature set to {self.targetTemp}f as of {currentTime}"
-                        sendEmail(subject, message)
-
-                    # 1 - 3600 is an arbitrary choice; between once/second and once/hour
-                    elif command == "set interval" and val in range(1, 3600):
-                        self.interval = val
-                        message = f"Interval set to {self.interval}s as of {currentTime}"
-                        sendEmail(subject, message)
-
-                    elif command == "get current":
-                        tempInternal, rhInternal = self.internal.getTemp(useHI=False, wantRH=True) 
-                        tempExternal, rhExternal = self.external.getTemp(useHI=False, wantRH=True)
-                        message = f"As of {currentTime}, temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
-                        sendEmail(subject, message)
-
-                    elif command == "get commands":
-                        message = f"{', '.join(self.recognizedCommands)}"
-                        sendEmail("Commands", message)
-
-                    elif command == "get interval":
-                        message = f"Interval is currently {self.interval}s"
-                        sendEmail(subject, message)
-
-                    elif "add" in command or "drop" in command:
-
-                        # use this to match more general email addresses (^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$) 
-                        # below will match only email addresses which conform to the 10 digit phone number + service provider extension (technically any extension)
-                        match = re.fullmatch(r"(^[0-9]{10}@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", val)
-
-                        if match is None:
-                            message = f"Input value ({val}) must be a valid email address"
-                            sendEmail(subject, message)
+                        elif ("add" in command or "drop" in command) and val is None:
+                            message = f"Add/Drop commands require contact information, such as '{command}: contact'"
+                            sendEmail(error, message)
                             continue
 
-                        if "add" in command:
-                            toggle = 1.0
+                        elif val is not None and "add" not in command and "drop" not in command:
 
-                        elif "drop" in command:
-                            toggle = None
+                            try:
+                                val = int(val)
 
-                        contactFilt = self.contactsDF["Contact"] == val
-                        rFilt = (self.contactsDF["Recipient"] != toggle) & contactFilt
-                        mFilt = (self.contactsDF["Malfunction"] != toggle) & contactFilt
+                            except:
+                                message = f"Input ({command}: {val}) could not be coerced to integer"
+                                sendEmail(error, message)
+                                continue
 
-                        if "recipient" in command and not self.contactsDF.loc[rFilt].empty:
-                            self.contactsDF.loc[contactFilt, "Recipient"] = toggle
-                            self.contactsDF.dropna(how="all", subset=["Recipient", "Malfunction"], inplace=True)
-                            self.contactsDF.to_csv(contactPath, index=False)
-                            message = f"Command ({command}) completed successfully"
+                        # 45 - 90 is an arbitrary choice, but figured it would cover most normal home temperatures
+                        if command == "set target" and val in range(45, 90):
+                            self.targetTemp = val
+                            message = f"Target Temperature set to {self.targetTemp}f as of {currentTime}"
                             sendEmail(subject, message)
 
-                        elif "malfunction" in command and not self.contactsDF.loc[mFilt].empty:
-                            self.contactsDF.loc[contactFilt, "Malfunction"] = toggle
-                            self.contactsDF.dropna(how="all", subset=["Recipient", "Malfunction"], inplace=True)
-                            self.contactsDF.to_csv(contactPath, index=False)
-                            message = f"Command ({command}) completed successfully"
+                        # 1 - 3600 is an arbitrary choice; between once/second and once/hour
+                        elif command == "set interval" and val in range(1, 3600):
+                            self.interval = val
+                            message = f"Interval set to {self.interval}s as of {currentTime}"
                             sendEmail(subject, message)
 
-                        elif toggle:
+                        elif command == "get current":
+                            tempInternal, rhInternal = self.internal.getTemp(useHI=False, wantRH=True) 
+                            tempExternal, rhExternal = self.external.getTemp(useHI=False, wantRH=True)
+                            message = f"As of {currentTime}, temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
+                            sendEmail(subject, message)
+                            time.sleep(0.5)
 
-                            if "recipient" in command:
-                                self.contactsDF = self.contactsDF.append({"Contact": val, "Recipient": 1}, ignore_index=True, sort=False)
+                        elif command == "get commands":
+                            message = f"{', '.join(self.recognizedCommands)}"
+                            sendEmail("Commands", message)
+
+                        elif command == "get interval":
+                            message = f"Interval is {self.interval}s as of {currentTime}"
+                            sendEmail(subject, message)
+
+                        elif command == "get feels like":
+                            internalVals = self.internal.getTemp(wantRH=True) 
+                            externalVals = self.external.getTemp(wantRH=True)
+                            tempInternal, rhInternal = internalVals
+                            tempExternal, rhExternal = externalVals
+                            message = f"As of {currentTime}, apparent temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
+                            sendEmail(subject, message)
+                            time.sleep(0.5)
+                            
+                        elif "add" in command or "drop" in command:
+
+                            # use this to match more general email addresses (^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$) 
+                            # below will match only email addresses which conform to the 10 digit phone number + service provider extension (technically any extension)
+                            match = re.fullmatch(r"(^[0-9]{10}@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", val)
+
+                            if match is None:
+                                message = f"Input value ({val}) must be a valid email address"
+                                sendEmail(subject, message)
+                                continue
+
+                            if "add" in command:
+                                toggle = 1.0
+
+                            elif "drop" in command:
+                                toggle = None
+
+                            contactFilt = self.contactsDF["Contact"] == val
+                            rFilt = (self.contactsDF["Recipient"] != toggle) & contactFilt
+                            mFilt = (self.contactsDF["Malfunction"] != toggle) & contactFilt
+
+                            if "recipient" in command and not self.contactsDF.loc[rFilt].empty:
+                                self.contactsDF.loc[contactFilt, "Recipient"] = toggle
+                                self.contactsDF.dropna(how="all", subset=["Recipient", "Malfunction"], inplace=True)
                                 self.contactsDF.to_csv(contactPath, index=False)
-                                message = f"Command ({command}) completed successfully"
+                                message = f"Command ({command}) completed successfully as of {currentTime}"
                                 sendEmail(subject, message)
 
-                            elif "malfunction" in command:
-                                self.contactsDF = self.contactsDF.append({"Contact": val, "Malfunction": 1}, ignore_index=True)
+                            elif "malfunction" in command and not self.contactsDF.loc[mFilt].empty:
+                                self.contactsDF.loc[contactFilt, "Malfunction"] = toggle
+                                self.contactsDF.dropna(how="all", subset=["Recipient", "Malfunction"], inplace=True)
                                 self.contactsDF.to_csv(contactPath, index=False)
-                                message = f"Command ({command}) completed successfully"
+                                message = f"Command ({command}) completed successfully as of {currentTime}"
                                 sendEmail(subject, message)
 
-                    elif command == "get feels like":
-                        internalVals = self.internal.getTemp(wantRH=True) 
-                        externalVals = self.external.getTemp(wantRH=True)
-                        tempInternal, rhInternal = internalVals
-                        tempExternal, rhExternal = externalVals
-                        message = f"As of {currentTime}, apparent temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
-                        sendEmail(subject, message)
+                            elif toggle:
 
-                    else:
-                        subject = "Error"
-                        message = f"Hm, something seems to have gone wrong. Please check your command ({command}) and value ({val}) for errors"
-                        sendEmail(subject, message)
+                                if "recipient" in command:
+                                    self.contactsDF = self.contactsDF.append({"Contact": val, "Recipient": 1}, ignore_index=True, sort=False)
+                                    self.contactsDF.to_csv(contactPath, index=False)
+                                    message = f"Command ({command}) completed successfully as of {currentTime}"
+                                    sendEmail(subject, message)
 
-                os.remove(path)
+                                elif "malfunction" in command:
+                                    self.contactsDF = self.contactsDF.append({"Contact": val, "Malfunction": 1}, ignore_index=True)
+                                    self.contactsDF.to_csv(contactPath, index=False)
+                                    message = f"Command ({command}) completed successfully as of {currentTime}"
+                                    sendEmail(subject, message)
+
+                        else:
+                            message = f"Hm, something seems to have gone wrong. Please check your command ({command}) and value ({val}) for errors"
+                            sendEmail(error, message)
+
+                    os.remove(path)
+                    
+            self.removeMail(mail)
 
     def removeMail(self, mail):
 
@@ -407,8 +421,7 @@ class Thermostat:
         }
 
         self.dataLog = self.dataLog.append(data, ignore_index=True)
-        self.dataLog.to_csv(self.logDir, index=False)       
-
+        self.dataLog.to_csv(self.logDir, index=False)
 
 # Setting up to send emails later
 # Using environmental variables to store username and password of associated Gmail account
@@ -452,6 +465,7 @@ thermo = Thermostat(68, Sensor("Internal Temperature", dht11, 4), Sensor("Extern
 globalBoolean = True
 logTimes = ["00", "15", "30", "45"]
 logged = False
+wantHeartbeat = True
 
 while True:
 
@@ -463,7 +477,6 @@ while True:
         # Creating variable to contain the current time
         status = "System Start"
         helloWorld = f"Initial boot at {currentTime}"
-
         sendEmail(status, helloWorld)
         # Turns off the welcome message after the first loop
         globalBoolean = False
@@ -482,5 +495,12 @@ while True:
     elif not doLog and logged:
         logged = False
     
+    if wantHeartbeat and minute == "00":
+        wantHeartbeat = False
+        sendEmail("Heartbeat", f"Still alive as of {currentTime}")
+
+    elif not wantHeartbeat and minute != "00":
+        wantHeartbeat = True
+
     # Set this to the interval for sensor checking -- how often to ping
     time.sleep(thermo.interval) # set to 900 for 15 min
