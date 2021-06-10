@@ -77,13 +77,13 @@ class Sensor:
             return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
 
         # But there should be a limit to the number of times we try in case the sensor is just broken
-        elif self.increment == 30:
+        else:
 
             if self.statusNominal:
                 # So, we turn off the ability of the list comprehension to call this sensor
                 self.statusNominal = False
                 # 14400 for four hours, 86400 for 24 -- Prevents multiple messages about the same issue in a short period of time
-                antiSpam = Timer(300, self.reset)
+                antiSpam = Timer(900, self.reset)
                 # And then start a timer to reset this, so that it doesn't require a reboot when the sensor is replaced, but also doesn't send notifications repeatedly in the mean time
                 antiSpam.start()
                 currentTime = time.strftime("%I:%M %p %b %d", time.localtime())
@@ -258,6 +258,7 @@ class Thermostat:
                             tempExternal, rhExternal = self.external.getTemp(useHI=False, wantRH=True)
                             message = f"As of {currentTime}, temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                             sendEmail(subject, message)
+                            time.sleep(0.5)
 
                         elif command == "get commands":
                             message = f"{', '.join(self.recognizedCommands)}"
@@ -274,6 +275,7 @@ class Thermostat:
                             tempExternal, rhExternal = externalVals
                             message = f"As of {currentTime}, apparent temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                             sendEmail(subject, message)
+                            time.sleep(0.5)
                             
                         elif "add" in command or "drop" in command:
 
@@ -481,6 +483,8 @@ while True:
 
     # checking for updates from user
     thermo.getInput()
+    # Set this to the interval for sensor checking -- how often to ping
+    time.sleep(thermo.interval) # set to 900 for 15 min
     thermo.checkTemp(currentTime)
 
     doLog = minute in logTimes
@@ -501,4 +505,4 @@ while True:
         wantHeartbeat = True
 
     # Set this to the interval for sensor checking -- how often to ping
-    time.sleep(thermo.interval) # set to 900 for 15 min
+    # time.sleep(thermo.interval) # set to 900 for 15 min
