@@ -69,7 +69,7 @@ class Sensor:
 
     def incrementState(self, useHI, wantRH, wantAll):
 
-        if self.increment < 50:
+        if self.increment < 30:
 
             self.increment += 1
             # giving the sensor time in case it's an issue of ping frequency overwhelming it
@@ -77,7 +77,7 @@ class Sensor:
             return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
 
         # But there should be a limit to the number of times we try in case the sensor is just broken
-        elif self.increment == 50:
+        elif self.increment == 30:
 
             if self.statusNominal:
                 # So, we turn off the ability of the list comprehension to call this sensor
