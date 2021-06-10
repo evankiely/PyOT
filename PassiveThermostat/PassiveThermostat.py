@@ -73,7 +73,7 @@ class Sensor:
 
             self.increment += 1
             # giving the sensor time in case it's an issue of ping frequency overwhelming it
-            time.sleep(1)
+            time.sleep(2)
             return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
 
         # But there should be a limit to the number of times we try in case the sensor is just broken
@@ -258,7 +258,6 @@ class Thermostat:
                             tempExternal, rhExternal = self.external.getTemp(useHI=False, wantRH=True)
                             message = f"As of {currentTime}, temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                             sendEmail(subject, message)
-                            time.sleep(0.5)
 
                         elif command == "get commands":
                             message = f"{', '.join(self.recognizedCommands)}"
@@ -275,7 +274,6 @@ class Thermostat:
                             tempExternal, rhExternal = externalVals
                             message = f"As of {currentTime}, apparent temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                             sendEmail(subject, message)
-                            time.sleep(0.5)
                             
                         elif "add" in command or "drop" in command:
 
