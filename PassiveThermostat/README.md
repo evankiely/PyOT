@@ -11,14 +11,13 @@ When to open windows:
  - If the temperature outside is below the target, and the temperature inside is below the temperature outside
 
 When to close windows:
- - If the temperature inside is above the target, and the temperature inside is below the temperature outside
- - If the temperature inside is below the target, and the temperature inside is above the temperature outside
+ - If the temperature inside is equal to or above the target, and the temperature inside is below the temperature outside
+ - If the temperature inside is equal to or below the target, and the temperature inside is above the temperature outside
 
 Notice that the last two cases under **open** windows are a bit fuzzy. They serve the purpose of approaching the target temperature, but, depending on your preference, may be better suited as a test of when to activate heating/cooling systems.
 
-Known issues:
- - If you are very actively communicating with the thermostat via commands, as described below, and you notice that it stops responding to your messages, it is likely that your messages have been shunted to the spam folder of the gmail account used by the thermostat. To remediate this, go to the spam folder, select all the messages from the erroneously filtered sender, then select the Not Spam button. This should resolve and prevent the issue moving forward
- - Using email -> sms for notifications (and vice versa for commands) is simple, and free for both an unlimited number of messages to/from the device, and for an unlimited number of contacts. However, the timing of these messages is not always consistent when sent en mass. In those cases, the program may send a notification via email at 9:00 am, but you may not recieve it until much later. This gets especially confusing due to lack of consistency -- a message sent after some other message may arrive before the first one. To help with this, most messages will be time/date stamped. If you have already encountered and remediated the issue above regarding spam filtering, it is likely that messages are just delayed, not diverted. Basically, don't send mass requests or more than a few commands at a time and things will work as expected
+~~Known Issues~~ Intended Features:
+ - If you are very actively communicating with the thermostat via commands, as described below, and you notice that it stops responding to your messages, it is likely that your messages have been shunted to the spam folder of the email account used by the thermostat. To remediate this, go to the spam folder, select all the messages from the erroneously filtered sender, then select the Not Spam button. This should resolve the issue, prevent it moving forward, and act as an additional filter for any undesired contacts
 
 **Materials and Cost**
  - [Raspberry Pi 3 B+ Kit](https://www.pishop.us/product/raspberry-pi-3-b-plus-starter-kit/): $65
@@ -120,9 +119,11 @@ This is relatively easy, especially if you purchase the DHT11/DHT22 as a module,
 
 Connect the power pin to either a 3.3 or 5v power pin, the ground pin to ground, and the data pin to one of the Pi's GPIO data pins. Be sure to note which data pin you've chosen, as you will need to alter the script to reflect that. In the script, I have specified GPIO pin four, which is physical pin 7, for all sensor instances in the script. This may be a bit confusing if you've never worked with electronics before, so I encourage you to review the Raspberry Pi's GPIO pinout documentation, which can be [found here](https://www.raspberrypi.org/documentation/usage/gpio/). In sum, it's important to realize that the physical pin numbering is independent of the GPIO number, since there is no need to count or refer to pins that do not handle data. After all, you'll likely never need to ping the voltage line for information.
 
-Finally, I should mention that the script is set-up, initially, to pretend as if a single sensor is really two. This sounds way more confusing than it actually is; it is simply a proof of concept by way of software modeling, and is done by creating two instances with the same reference pin (see line 385). Remember to change these reference pins as needed, or start with only a single sensor, otherwise you will receive some very confusing results.
+Finally, I should mention that the script is set-up, initially, to pretend as if a single sensor is really two. This sounds way more confusing than it actually is; it is simply a proof of concept by way of software modeling, and is done by creating two instances with the same reference pin. Remember to change these reference pins as needed, or start with only a single sensor, otherwise you will receive some very confusing results.
 
 ## Establishing the Gmail Interface and Declaring Environmental Variables
+
+**Note**: Because this program uses standard SMTP and IMAP interfaces, you are not constrained to using Gmail for this aspect of the project. You can use any email provider who will allow you to interface this way, though not all will provide API style tokens, requiring you to use your actual password. In the case where you choose, say, ProtonMail, you would need to interface with the [ProtonMail Bridge](https://protonmail.com/bridge/), which is only available to users who have purchased a subscription. However, using most other free providers should only require you to replace "gmail" with the domain of the provider you select. For example: imap.gmail.com and smtp.gmail.com become imap.(domain).com and smtp.(domain).com
 
 To begin with, if you haven't already created a Gmail account, go do that now. It will require a verified phone number, so keep that in mind.
 
@@ -182,11 +183,11 @@ This class is meant to be flexible, and will work with any sensor that outputs a
 
 These instances of the sensor class are not actually assigned to a variable in the script provided. Instead they are passed directly to the Thermostat class, as follows:
 
-`variableName = Thermostat(targetTemp, Sensor1, Sensor2, contactsDF)`
+`variableName = Thermostat(targetTemp, Sensor1, Sensor2)`
 
-Where `targetTemp` is an integer representing the desired temperature in degrees Fahrenheit (defaults to 68), `Sensor1` and `Sensor2` are instances of the Sensor class (instantiated as described above), and contactsDF is a dataframe created from the contacts.csv file.
+Where `targetTemp` is an integer representing the desired temperature in degrees Fahrenheit (defaults to 68), `Sensor1` and `Sensor2` are instances of the Sensor class (instantiated as described above).
 
-Finally, let's provide some contact info by creating a .csv files called "contacts" which should have the following headers: Contact, Recipient, and Malfunction. Under the Contact header, provide the individual's contact info, and a 1 or a 0 under the Recipient and Malfunction headers. A 1 under either of these indicates that the individual is to recieve notifications of those types, where Recipient is standard notifications, and Malfunction is for any notification related to a sensor failure, etc.
+Finally, let's provide some contact info by creating a .csv files called "contacts" which should have Contact and Recipient headers. Under the Contact header, provide the individual's contact info, and a 1 or a 0 under the Recipient. A 1 indicates that the individual is to recieve notifications. It is easier to do things this way if you need to add more than one or two people. It is also required that there be at least one valid contact in this list from the beginning, or there will be no authorized contacts from which to recieve commands, including those used to add additional contacts to the dataframe.
 
 Some of you might be confused here since I explicitly state that the notifications come through as text messages. This is true, but we're going to be very sneaky in how we make it happen. Rather than actually attaching a phone number to the Raspberry Pi by giving it a GSM/CDMA link, let's take advantage of a service the vast majority of carriers in the US, and likely other countries as well, already offer: Email -> Text. Within the script itself, and below, you will see an example phone number attached to the "vtext.com" domain via the @ symbol.
 
@@ -205,8 +206,6 @@ Cricket: @sms.cricketwireless.net
 
 If you don't see your provider above, a simple [Google search](duckduckgo.com) will absolutely give you what you need.
 
-Keep in mind that anyone who is a malfunction contact will receive special notifications when a sensor failure is detected. If you wish to receive both standard power on, temperature info, etc., in addition to notifications about sensor failure, you must be included in both categories.
-
 Once that is done, open the script, hit run, and see what happens!
 
 If you receive errors here, ensure that the name you provided for your environmental variable and what is being referenced within `os.environ.get(_)` (where the underscore is just a placeholder; `"gmailUser"`/`"gmailToken"`) are the same. If you want to confirm that there is an issue with your environmental variables, first confirm that the variable you have within `os.environ.get(_)` is a string (i.e. `os.environ.get("_")`). If you can confirm that, the next thing to try is commenting out the `os.environ.get(_)` lines entirely and providing the associated email and token to the script directly. Again, as a string.
@@ -221,22 +220,19 @@ Even so, since there is no (built in) way for you to be notified if the script i
 set target: [int] <-- Used to change the target temperature (degrees Fahrenheit)
 set interval: [int] <-- Used to change the frequency (in Seconds) at which requests are sent to the sensors
 
+get target <-- Returns current target temperature
 get current  <-- Returns current temperature and relative humidity values
 get commands <-- Returns a list of recognized commands
 get interval <-- Returns the current interval value
 get feels like <-- Returns the apparent temperature and relative humidity values
 
 add recipient: [contact] <-- Adds the provided contact to the Recipient list
-add malfunction: [contact] <-- Adds the provided contact to the Malfunction list
 drop recipient: [contact] <-- Drops the provided contact from the Recipient list
-drop malfunction: [contact] <-- Drops the provided contact from the Malfunction list
 ```
 
-Multiple commands can be sent at once by including a return between them. Notice that the set and add/drop commands require ": " followed by user input. In the case of the set commands, the input expected is an integer value. For add/drop commands, it is a string which is evaluated with regex to ensure that it is likely a valid email address. Add and drop alterations are saved in the previously mentioned contacts.csv, and so will persist in the event of power outage, etc.
+Multiple commands can be sent at once by including a return or ", " between them. Notice that the set and add/drop commands require ": " followed by user input. In the case of the set commands, the input expected is an integer value. For add/drop commands, it is a string which is evaluated with regex to ensure that it is likely a valid email address of format: (10 digit phone number)@(hostname). If you'd like to send messages to actual email address as well, I've included the regex for that as well, as a commented line. Add and drop alterations are saved in the previously mentioned contacts.csv, and so will persist in the event of power outage, etc. Other alterations are not current persisted.
 
 **Disclaimer: There is not currently a process in place for a user added to these lists to be notified and confirm that they wish to be added. They may, however, drop themselves using the commands above. Even so, don't add people without their knowledge...**
-
-I have also implemented a check that tracks the number of times in a row a given sensor has been pinged, and which will notify the emergency contact of a potential sensor failure, if a given threshold is reached, and a preventative check that turns off monitoring for a given sensor for a set time, if that sensor had previously found to be malfunctioning. This is to prevent multiple notifications about the same issue within a short period of time, and does not impede/disable checking the remaining sensors.
 
 ## Forcing the Script to Run on Boot
 

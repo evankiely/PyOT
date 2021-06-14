@@ -122,8 +122,7 @@ class Thermostat:
             "get target", "get current",
             "get commands", "get interval",
             "get feels like", "add recipient",
-            "add malfunction", "drop recipient",
-            "drop malfunction"
+            "drop recipient"
 
         ]
 
@@ -162,7 +161,7 @@ class Thermostat:
             self.dataLog = pd.read_csv(self.logFile, dtype=str)
 
         if not os.path.exists(self.contactsFile):
-            columns =["Contact", "Recipient", "Malfunction"]
+            columns =["Contact", "Recipient"]
             self.contactsDF = pd.DataFrame(columns=columns)
             self.contactsDF.to_csv(self.contactsFile, index=False)
 
@@ -170,7 +169,6 @@ class Thermostat:
             self.contactsDF = pd.read_csv(self.contactsFile)
             self.recipientEmail = self.contactsDF.loc[self.contactsDF["Recipient"] == 1.0, "Contact"].astype(list)
             self.authedInputs = [email.split("@")[0] for email in self.recipientEmail]
-            self.malfunctionContact = self.contactsDF.loc[self.contactsDF["Malfunction"] == 1.0, "Contact"].astype(list)
 
     def helloWorld(self):
         status = "System Start"
@@ -328,7 +326,6 @@ class Thermostat:
 
                     elif command == "get commands":
                         commands = [recognized for recognized in self.recognizedCommands if "add" not in recognized and "drop" not in recognized]
-                        commands += ["add/drop recipient", "add/drop malfunction"]
                         message = f"{', '.join(commands)}"
                         self.sendEmail("Commands", message)
 
@@ -364,22 +361,15 @@ class Thermostat:
 
                     contactFilt = self.contactsDF["Contact"] == val
                     rFilt = (self.contactsDF["Recipient"] != toggle) & contactFilt
-                    mFilt = (self.contactsDF["Malfunction"] != toggle) & contactFilt
 
                     recipientInCommand = "recipient" in command
-                    malfunctionInCommand = "malfunction" in command
 
                     if recipientInCommand and not self.contactsDF.loc[rFilt].empty:
                         self.contactsDF.loc[contactFilt, "Recipient"] = toggle
-                        self.contactsDF.dropna(how="all", subset=["Recipient", "Malfunction"], inplace=True)
+                        self.contactsDF.dropna(subset=["Recipient"], inplace=True)
                         self.contactsDF.to_csv(self.contactsFile, index=False)
                         self.recipientEmail = self.contactsDF.loc[self.contactsDF["Recipient"] == 1.0, "Contact"].astype(list)
                         self.authedInputs = [email.split("@")[0] for email in self.recipientEmail]
-
-                    elif malfunctionInCommand and not self.contactsDF.loc[mFilt].empty:
-                        self.contactsDF.loc[contactFilt, "Malfunction"] = toggle
-                        self.contactsDF.dropna(how="all", subset=["Recipient", "Malfunction"], inplace=True)
-                        self.contactsDF.to_csv(self.contactsFile, index=False)
 
                     elif toggle and not self.contactsDF["Contact"].isin([val]).any():
 
@@ -389,10 +379,6 @@ class Thermostat:
                             self.recipientEmail = self.contactsDF.loc[self.contactsDF["Recipient"] == 1.0, "Contact"].astype(list)
                             self.authedInputs = [email.split("@")[0] for email in self.recipientEmail]
 
-                        elif malfunctionInCommand:
-                            self.contactsDF = self.contactsDF.append({"Contact": val, "Malfunction": 1}, ignore_index=True)
-                            self.contactsDF.to_csv(self.contactsFile, index=False)
-
                     else:
                         message = f"Cannot execute command ({command}), as it appears {val} is already listed as a contact of that type"
                         self.sendEmail(subject, message)
@@ -401,7 +387,6 @@ class Thermostat:
                     self.sendEmail(subject, message)
                     self.recipientEmail = self.contactsDF.loc[self.contactsDF["Recipient"] == 1.0, "Contact"].astype(list)
                     self.authedInputs = [email.split("@")[0] for email in self.recipientEmail]
-                    self.malfunctionContact = self.contactsDF.loc[self.contactsDF["Malfunction"] == 1.0, "Contact"].astype(list)
 
                 else:
                     message = f"Hm, something seems to have gone wrong. Please check your command ({command}) and value ({val}) for errors"
