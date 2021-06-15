@@ -67,7 +67,7 @@ class Sensor:
 
             self.increment += 1
             # giving the sensor time in case it's an issue of ping frequency overwhelming it
-            time.sleep(3)
+            time.sleep(1)
             return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
 
         # But there should be a limit to the number of times we try in case the sensor is just broken
@@ -264,7 +264,6 @@ class Thermostat:
     def followCommands(self):
 
         commands = self.aggregateCommands()
-
         subject = "Confirmation"
         error = "Error"
 
@@ -318,11 +317,26 @@ class Thermostat:
                         self.sendEmail(subject, message)
 
                     elif command == "get current":
-                        tempInternal, rhInternal = self.internal.getTemp(useHI=False, wantRH=True) 
-                        tempExternal, rhExternal = self.external.getTemp(useHI=False, wantRH=True)
+
+                        tempInternal, tempExternal = 999, 999
+                        # clear risk of infinite loop here, but this is the best solution to recieving false positive malfuntions so far
+                        while tempInternal == 999 or tempExternal == 999:
+                            tempInternal, rhInternal = self.internal.getTemp(useHI=False, wantRH=True) 
+                            tempExternal, rhExternal = self.external.getTemp(useHI=False, wantRH=True)
+
                         message = f"As of {self.currentTime}, temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
                         self.sendEmail(subject, message)
-                        time.sleep(0.5)
+
+                    elif command == "get feels like":
+
+                        tempInternal, tempExternal = 999, 999
+                        # clear risk of infinite loop here, but this is the best solution to recieving false positive malfuntions so far
+                        while tempInternal == 999 or tempExternal == 999:
+                            tempInternal, rhInternal = self.internal.getTemp(wantRH=True) 
+                            tempExternal, rhExternal = self.external.getTemp(wantRH=True)
+
+                        message = f"As of {self.currentTime}, apparent temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
+                        self.sendEmail(subject, message)
 
                     elif command == "get commands":
                         commands = [recognized for recognized in self.recognizedCommands if "add" not in recognized and "drop" not in recognized]
@@ -332,15 +346,6 @@ class Thermostat:
                     elif command == "get interval":
                         message = f"Interval is {self.interval}s as of {self.currentTime}"
                         self.sendEmail(subject, message)
-
-                    elif command == "get feels like":
-                        internalVals = self.internal.getTemp(wantRH=True) 
-                        externalVals = self.external.getTemp(wantRH=True)
-                        tempInternal, rhInternal = internalVals
-                        tempExternal, rhExternal = externalVals
-                        message = f"As of {self.currentTime}, apparent temperature and RH outside: {tempExternal}f, {rhExternal}%, and inside: {tempInternal}f, {rhInternal}% with target temperature of {self.targetTemp}f"
-                        self.sendEmail(subject, message)
-                        time.sleep(0.5)
                         
                 elif addInCommand or dropInCommand:
 
@@ -451,7 +456,7 @@ class Thermostat:
         tempInternal = self.internal.getTemp() 
         tempExternal = self.external.getTemp()
 
-        if tempInternal != 999 and tempExternal != 999 :
+        if tempInternal != 999 and tempExternal != 999:
 
             if not self.isOpen:
 
@@ -501,6 +506,8 @@ class Thermostat:
         internalTemp, internalHI, internalRH = self.internal.getTemp(wantAll=True)
         externalTemp, externalHI, externalRH = self.external.getTemp(wantAll=True)
 
+        # hope here is that it continues to loop and gets at least a single pair of good readings before the doLog reads False
+        # certainly not the most elegant, but definitely the best way of avoiding false positive malfunction readings
         if internalTemp == 999 or externalTemp == 999:
             return
 
