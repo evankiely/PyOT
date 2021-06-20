@@ -19,7 +19,7 @@ Notice that the last two cases under **open** windows are a bit fuzzy. They serv
 ~~Known Issues~~ Intended Features:
  - If you are very actively communicating with the thermostat via commands, as described below, and you notice that it stops responding to your messages, it is likely that your messages have been shunted to the spam folder of the email account used by the thermostat. To remediate this, go to the spam folder, select all the messages from the erroneously filtered sender, then select the Not Spam button. This should resolve the issue, prevent it moving forward, and act as an additional filter for any undesired contacts
 
-**Materials and Cost**
+**Materials and Cost** (as of 06/20/2021)
  - Raspberry Pi (or other [SBC](https://en.wikipedia.org/wiki/Single-board_computer))
    - [Raspberry Pi 3 B+ Kit](https://www.pishop.us/product/raspberry-pi-3-b-plus-starter-kit/): $65
    - [Raspberry Pi Zero W Kit](https://www.amazon.com/CanaKit-Raspberry-Wireless-Complete-Starter/dp/B07CMVDHWB/ref=pd_sbs_14/131-4316577-2525250?pd_rd_w=3SNDc&pf_rd_p=f8e24c42-8be0-4374-84aa-bb08fd897453&pf_rd_r=VJK610W0FARTBCNVHG0E&pd_rd_r=4eb32cbc-b5be-43f0-a489-93ce3fc763ef&pd_rd_wg=fesic&pd_rd_i=B07CMVDHWB&psc=1): $35
@@ -27,7 +27,7 @@ Notice that the last two cases under **open** windows are a bit fuzzy. They serv
  - [4 Wire Ribbon Cable (20 Meters)](https://www.amazon.com/65-6-Color-Extension-Cable-Strip/dp/B00L67YQ9W/ref=sr_1_3?keywords=3+wire+ribbon+cable&qid=1579014504&sr=8-3): $10
  - [Soldering Iron and Solder](https://www.amazon.com/Soldering-Kit-Temperature-Desoldering-Electronics/dp/B07XKZVG8Z/ref=sr_1_9?keywords=soldering+iron&qid=1580765871&sr=8-9): $11
 
- **Total: $68 - $98** -- As of 06/20/2021.
+ **Total: $68 - $98**
 
 **Note:** This script was written to work with, and has only been tested using, the DHT11 and DHT22 temperature and humidity sensors. That said, any sensor with an analogous pin out and similar library should be compatible with what has already been written. I go into more detail on this point in Section 4.
 

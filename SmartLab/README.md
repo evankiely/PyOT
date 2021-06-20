@@ -1,7 +1,7 @@
 # Smart Lab
 ### Autonomous Monitoring of Laboratory Equipment with Text Message Notifications
 
-**Materials and Cost**
+**Materials and Cost** (as of 06/20/2021)
  - Raspberry Pi (or other [SBC](https://en.wikipedia.org/wiki/Single-board_computer))
    - [Raspberry Pi 3 B+ Kit](https://www.pishop.us/product/raspberry-pi-3-b-plus-starter-kit/): $65
    - [Raspberry Pi Zero W Kit](https://www.amazon.com/CanaKit-Raspberry-Wireless-Complete-Starter/dp/B07CMVDHWB/ref=pd_sbs_14/131-4316577-2525250?pd_rd_w=3SNDc&pf_rd_p=f8e24c42-8be0-4374-84aa-bb08fd897453&pf_rd_r=VJK610W0FARTBCNVHG0E&pd_rd_r=4eb32cbc-b5be-43f0-a489-93ce3fc763ef&pd_rd_wg=fesic&pd_rd_i=B07CMVDHWB&psc=1): $35
@@ -9,7 +9,7 @@
  - [4 Wire Ribbon Cable (20 Meters)](https://www.amazon.com/65-6-Color-Extension-Cable-Strip/dp/B00L67YQ9W/ref=sr_1_3?keywords=3+wire+ribbon+cable&qid=1579014504&sr=8-3): $10
  - [Soldering Iron and Solder](https://www.amazon.com/Soldering-Kit-Temperature-Desoldering-Electronics/dp/B07XKZVG8Z/ref=sr_1_9?keywords=soldering+iron&qid=1580765871&sr=8-9): $11
 
- **Total: $68 - $98** -- As of 06/20/2021.
+ **Total: $68 - $98**
 
 **Note 1:** As this was originally written during my time in the [Gilbert-Ross Lab](https://www.gilbertrosslab.com), acknowledgement/citation would be appreciated if used in a meaningful way to facilitate research culminating in a publication, and/or if modified to serve such a purpose.
 
