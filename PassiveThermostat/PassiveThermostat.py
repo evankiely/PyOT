@@ -27,7 +27,7 @@ class Sensor:
         self.pin = pin
 
     # Main function of the sensor class - does what it sounds like, returns relevant values, and notifies if a given sensor appears to have failed
-    def getTemp(self, useHI=True, wantRH=False, wantAll=False):
+    def getTemp(self, useHI=True, wantRH=False, wantAll=False, useF=True):
 
         # Pulls temperature and humidity values from the sensor
         humidity, temperature = Adafruit_DHT.read(self.sensor, self.pin)
@@ -35,8 +35,10 @@ class Sensor:
         # Filtering for absence of sensor data
         if humidity is not None and temperature is not None:
 
-            # converting c to f
-            temperature = round((temperature * 1.8) + 32)
+            if useF:
+                # converting c to f
+                temperature = round((temperature * 1.8) + 32)
+
             humidity = round(humidity)
 
             if wantAll:
@@ -98,6 +100,34 @@ class Sensor:
         
         return round(HI)
 
+    # calculations per: https://web.archive.org/web/20200212215746im_/https://www.vaisala.com/en/system/files?file=documents/Humidity_Conversion_Formulas_B210973EN.pdf
+    # which was referenced here: https://earthscience.stackexchange.com/questions/16570/how-to-calculate-relative-humidity-from-temperature-dew-point-and-pressure
+    def getDewPoint(self, useF=True):
+        temp, RH = 999, 999
+
+        while temp == 999 or RH == 999:
+            temp, RH = self.getTemp(useHI=False, wantRH=True, useF=False)
+
+        # first calculate water vapour saturation pressure over water/ice in hPa
+        if temp in range(-70, 0):
+            A, m, Tn = 6.114742, 9.778707, 273.1466
+
+        elif temp in range(0, 51):
+            A, m, Tn = 6.116441, 7.591386, 240.7263
+
+        Pws = A * 10**((m * temp)/ (temp + Tn))
+
+        # next derive the water vapour pressure
+        Pw = (Pws * RH)/100
+        # finally, calculate the dew point
+        Td = Tn/((m/math.log10(Pw/A))-1)
+
+        if useF:
+            # converting c to f
+            Td = (Td * 1.8) + 32
+
+        return round(Td)
+
 class Thermostat:
 
     def __init__(self, targetTemp, internal: Sensor, external: Sensor):
@@ -121,8 +151,8 @@ class Thermostat:
             "set target", "set interval",
             "get target", "get current",
             "get commands", "get interval",
-            "get feels like", "add recipient",
-            "drop recipient"
+            "get feels like", "get dew point",
+            "add recipient", "drop recipient"
 
         ]
 
@@ -345,6 +375,12 @@ class Thermostat:
 
                     elif command == "get interval":
                         message = f"Interval is {self.interval}s as of {self.currentTime}"
+                        self.sendEmail(subject, message)
+
+                    elif command == "get dew point":
+                        TdInternal = self.internal.getDewPoint()
+                        TdExternal = self.internal.getDewPoint()
+                        message = f"Dew point internal is {TdInternal}f and dew point external is {TdExternal}f as of {self.currentTime}"
                         self.sendEmail(subject, message)
                         
                 elif addInCommand or dropInCommand:
