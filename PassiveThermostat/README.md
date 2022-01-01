@@ -72,10 +72,9 @@ Next, navigate to the preferences pane and set "Auto login" to Disabled, before 
 
 This will not only delete the default account, it also removes the associated home folder as well. If you see a message saying that it failed to locate that user's Mail Spool, or something to that effect, you can ignore it, as there was nothing to delete.
 
-Finally, in the terminal, type the following to add the newly created user to the netdev group, which prevents the wireless interface icon from misbehaving:
+Finally, in the terminal, type the following to add the newly created user to the netdev group, which prevents the wireless interface icon from misbehaving (a reboot is required to see this change take effect in the GUI):
 
-`sudo -i`
-`usermod -a -G netdev __`
+`sudo -i usermod -a -G netdev __`
 
 Where, again, the blank is the new user's username.
 
