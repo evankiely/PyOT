@@ -18,8 +18,8 @@
 **Disclaimer: It is likely illegal to use this kind of script/technique to automate advertising and the like, so just don't...**
 
 ### Key Steps:
-1) Modifying the Pi for Enterprise Networking (Incomplete)
-2) Securing the Pi for Institutional Use (Incomplete/Under Review)
+1) Modifying the Pi for Enterprise Networking (Incomplete) - No longer being pursued due to institutional regulations
+2) Securing the Pi for Institutional Use (Incomplete) - No longer being pursued due to institutional regulations
 3) Prototyping Set-Up
 4) Establishing the Gmail Interface and Declaring Environmental Variables
 5) Tweaking Specifics to Fit Your Needs
