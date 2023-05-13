@@ -4,6 +4,16 @@ I intend, shortly, to revise this code. I may revise it to align more closely wi
 
 I should also note that while below I state this uses apparent temperature, that was never implemented, though is still something I would like to work towards. Of particular interest is developing an opensource version of the proprietary algorithms/formulas used by The Weather Company, etc., and which may take into consideration factors like UV index, cloud coverage, etc. However, I will first need to implement wet bulb temperature and a way to get wind speed from either an API or sensor (perhaps something like [this](https://projects.raspberrypi.org/en/projects/build-your-own-weather-station/5), or maybe a DIY version) in order to finally calculate apparent temperature.
 
+Additionally, I would like to consider updating, or allowing the option to use, different logic than what is provided below. In particular, I wish to address this hypothetical:
+
+Suppose it is summer and the days are hot but the nights and early mornings are cool. In this case, windows should be open as soon as the outside temperature drops below the target, which this logic already does. However,if we continue with the current logic, windows will stay open until the target is reached, meaning there's not necessarily a major benefit throughout the day.
+
+Suppose instead that the windows closed when there was no additional cooling benefit, and instead acted to trap the cool air inside. This is in conflict with the stated intent of maintaining a set-point temperature, but makes more (common) sense. However, this also means we need to watch for the internal temperature to drop to the lowest temperature, which may be hard, since this is passive cooling of a potentially large space, and we don't necessarily know what the lowest temperature is going to be, or when it will start to go up, etc. with the current version.
+
+So the above might require use of an API to fetch hourly projections and plan accordingly. Or maybe something simpler like 5 sequential readings of increasing temperature over some period of time, so long as the inside is not warmer than the outside (i.e. even if it's warming outside, if it's still cooler outside, we want to continue cooling the house). Either way, these must be made context aware, in that they need to know if the goal is to minimize the temperature relative to the target, to maximize the temperature relative to the target, or actually just approach and maintain set-point.
+
+Minimization/maximization with respect to a target is likely the best way to consider this problem, as it implicitly encapsulates a lot of the same logic as what is below. This makes sense, and it is similar to the basis of most HVAC systems (i.e. set either heat/cool relative to some temperature, and if set to heat, the temperature inside can be way above the "target", just so long as it isn't below). It also differs in that it seeks to minimize or maximize, whereas the HVAC as described only acts when the target is breached in the wrong direction. However, this required some additional logic and user interface which I was not prepared to implement earlier, but now I may also refactor with this in mind.
+
 ### Work with Nature to Maintain a Pre-Set Temperature & Avoid Unnecessary Heating/Cooling
 
 **About**:
