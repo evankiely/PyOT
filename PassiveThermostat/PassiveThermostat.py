@@ -29,7 +29,7 @@ class Sensor:
     # Main function of the sensor class - does what it sounds like, returns relevant values, and notifies if a given sensor appears to have failed
     def getTemp(self, useHI=True, wantRH=False, wantAll=False, useF=True):
 
-        # Pulls temperature and humidity values from the sensor
+        # Pulls temperature and (relative) humidity values from the sensor
         humidity, temperature = Adafruit_DHT.read(self.sensor, self.pin)
 
         # Filtering for absence of sensor data
