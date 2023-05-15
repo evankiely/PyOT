@@ -65,39 +65,21 @@ You may think "This is a simple Raspberry Pi project, who cares about hacking my
 
 **Keep track of any changes you make when following the instructions below, as they will impact how we do things later. Specifically, after deleting the default user, note that anywhere a directory includes `/pi` you will need to, instead, use the username associated with the new account you have made, as in `/username`**
 
-This section will configure the Pi in such a way that you will not be able to use `ssh`, `tcp`, etc. to connect to it; you will need physical access to the device to interface with it, and it will be near impossible to access remotely. If you do not wish to set the Pi up in this way, please do some independent research into how you might achieve the configuration you desire without introducing potential vulnerabilities to your network.
+This section will configure the Pi in such a way that you will not be able to use `ssh`, `tcp`, etc. to connect to it; after we complete the below, you will need physical access to the device to interface with it, and it will be near impossible to access remotely. If you do not wish to set the Pi up in this way, please do some independent research into how you might achieve the configuration you desire without introducing potential vulnerabilities to your network.
 
-The first thing you should do in any situation like this is to change the default username and password for the Pi. To do so, we will create a new user with `sudo` (high level) privileges, then we will log in as the new user and delete the default account.
+**Note** that SSH is disabled by default, so if you intend to set this up, you will need physical access and interface methods.
 
-Begin by opening a terminal window and typing:
+If you would like to allow SSH with caveats, [check out this guide](https://pimylifeup.com/raspberry-pi-ufw/), and remember to enable it in the settings. If you go this route, it does make a number of things easier, especially if you [install VSCode](https://code.visualstudio.com/docs/setup/raspberry-pi) and the [requisite Remote Development extensions](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack), which will enable you to develop on the Pi from a different machine.
 
-`sudo adduser __`
+**Before anything else, you should always run `sudo apt update` and `sudo apt full-upgrade` to ensure your OS and software(s) are fully up to date.**
 
-To create a new user, followed by:
-
-`sudo adduser __ sudo`
-
-To add that user to the "sudo" list
-
-Where the blank is the new user's username. You will be prompted to enter, and confirm, a password for this user. Do not forget it. This new user, even though granted `sudo` (high level) privileges, will need to enter their password anytime they use a `sudo` command, thus adding an additional layer of security.
-
-Next, navigate to the preferences pane and set "Auto login" to Disabled, before rebooting. Upon restart, log into the new user that you just made. Again, open a terminal window, this time typing:
-
-`sudo userdel -r pi`
-
-This will not only delete the default account, it also removes the associated home folder as well. If you see a message saying that it failed to locate that user's Mail Spool, or something to that effect, you can ignore it, as there was nothing to delete.
-
-Finally, in the terminal, type the following to add the newly created user to the netdev group, which prevents the wireless interface icon from misbehaving (a reboot is required to see this change take effect in the GUI):
-
-`sudo -i usermod -a -G netdev __`
-
-Where, again, the blank is the new user's username.
+I used to have a section here about adding a new `sudo` user and removing the default `pi` user, but it seems the folks behind Rasberry Pi OS realized this was an issue and decided to resolve it permanently by providing the OS with no default user, so I've eliminated that part of this guide. For more information, see [here](https://arstechnica.com/gadgets/2022/04/raspberry-pi-os-axes-longstanding-default-user-account-in-the-name-of-security/). Now instead you should go through the standard set-up process, and ensure you have a strong password!
 
 Secondly, from the desktop, navigate to:
 
 `Main Menu -> Preferences -> Raspberry Pi Configuration`
 
-You can basically leave everything on the `System` tab alone. However, on the `Interfaces` tab, make sure everything is set to `Disable`.
+You can basically leave everything on the `System` tab alone, except the "Auto login" setting, which is default on. However, on the `Interfaces` tab, make sure everything is set to `Disable`. They should already be set as such now (another change for the better since I originally wrote this), but it's good to double check!
 
 Now we want to make sure the Pi automatically updates the operating system. To do this, we will use a single command:
 
@@ -126,8 +108,6 @@ Which downloads and installs Uncomplicated Firewall, and:
 `sudo ufw enable`
 
 Which enables the firewall and forces the operating system to start it on boot, so your Pi is protected as soon as it turns on. There are, of course, more complicated options, wherein you can specify ports that can or cannot be accessed, the protocols that are allowed to be used to access them, and much more, but, again, if you want a more detailed/customized set-up, I encourage you to research what exactly it is you need/want.
-
-If you would like to allow SSH with caveats, [check out this guide](https://pimylifeup.com/raspberry-pi-ufw/), and remember to enable it in the settings. If you go this route, it does make a number of things easier, especially if you [install VSCode](https://code.visualstudio.com/docs/setup/raspberry-pi) and the [requisite Remote Development extensions](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack), which will enable you to develop on the Pi from a different machine.
 
 ## Prototyping Set-Up
 
