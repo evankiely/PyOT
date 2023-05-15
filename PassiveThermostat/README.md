@@ -57,6 +57,16 @@ Notice that the last two cases under **open** windows are a bit fuzzy. They serv
 6) Verifying Start on Boot
 7) Final Set Up
 
+**Of Potential Value**: If you are working with a "hidden" SSID, you will need to alter the `wpa_supplicant` file. You can do this by opening a terminal and typing `sudo nano /etc/wpa_supplicant/wpa_supplicant.conf`. This will allow you to add the wifi credentials, after which you should reboot the pi. The credentials should be in the following format:
+
+```
+network={
+  scan_ssid=1
+  ssid="your wifi name including quotes"
+  psk="your password including quotes"
+}
+```
+
 ## Securing the Pi
 
 You may think "This is a simple Raspberry Pi project, who cares about hacking my single board computer?" and you've got a point, because most people are not hackers, and most hackers aren't interested in your project. That said, they may be interested in what your project can enable them to access once compromised. Take, for example, [this article](https://www.engadget.com/2019/06/20/nasa-jpl-cybersecurity-weaknesses/) detailing how NASA's Jet Propulsion Laboratory was breached via an unsecured Raspberry Pi. I don't mean to fear monger, but it is important that you consider the bigger picture, as you are adding a device to a larger network, which is almost certain to have more important devices and data attached to it than the Pi itself.
@@ -69,7 +79,7 @@ This section will configure the Pi in such a way that you will not be able to us
 
 **Note** that SSH is disabled by default, so if you intend to set this up, you will need physical access and interface methods.
 
-If you would like to allow SSH with caveats, [check out this guide](https://pimylifeup.com/raspberry-pi-ufw/), and remember to enable it in the settings. If you go this route, it does make a number of things easier, especially if you [install VSCode](https://code.visualstudio.com/docs/setup/raspberry-pi) and the [requisite Remote Development extensions](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack), which will enable you to develop on the Pi from a different machine.
+If you would like to allow SSH with caveats, [check out this guide](https://pimylifeup.com/raspberry-pi-ufw/), and remember to enable it in the settings. If you go this route, it does make a number of things easier, especially if you [install VSCode](https://code.visualstudio.com/docs/setup/raspberry-pi) and the [requisite Remote Development extensions](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack), which will enable you to develop on the Pi from a different machine. You should also be aware that this may not function on networks which have explicit limits imposed regarding how machines on the network communicate.
 
 **Before anything else, you should always run `sudo apt update` and `sudo apt full-upgrade` to ensure your OS and software(s) are fully up to date.**
 
