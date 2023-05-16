@@ -15,151 +15,11 @@ import imaplib
 import Adafruit_DHT
 import pandas as pd
 from email.message import EmailMessage
-
-
-# Defining Sensor class that will be used to hold values specific to a given sensor and location
-class Sensor:
-    # Defining initialization requirements and their corresponding methods
-    def __init__(self, sensorLocation, sensor, pin):
-        self.location = sensorLocation
-        self.sensor = sensor
-        self.increment = 0
-        self.pin = pin
-
-    def c_to_f(self, temperature):
-        return round((temperature * 1.8) + 32)
-
-    # Main function of the sensor class - does what it sounds like, returns relevant values, and notifies if a given sensor appears to have failed
-    def getTemp(self, useHI=True, wantRH=False, wantAll=False, useF=True):
-        # Pulls temperature and (relative) humidity values from the sensor
-        humidity, temperature = Adafruit_DHT.read(self.sensor, self.pin)
-
-        # Filtering for absence of sensor data
-        if humidity is not None and temperature is not None:
-            if useF:
-                # converting c to f
-                temperature = self.c_to_f(temperature)
-
-            humidity = round(humidity)
-
-            # NOTE that this should enforce temperature in F and not allow this if in C
-            # potentially problematic that we allow useF to overwrite the C val before checking this
-
-            # TODO enforce conversions only at the end or when required
-
-            if wantAll:
-                tempHI = self.get_heat_index(humidity, temperature)
-                return (temperature, tempHI, humidity)
-
-            else:
-                # HI = Heat Index aka Apparent Temperature
-                if useHI:
-                    if wantRH:
-                        return (self.get_heat_index(humidity, temperature), humidity)
-
-                    return self.get_heat_index(humidity, temperature)
-
-                if wantRH:
-                    return (temperature, humidity)
-
-                return temperature
-
-        return self.incrementState(useHI, wantRH, wantAll)
-        # If there does seem to be an issue with the sensor data, we need to try again
-
-    def incrementState(self, useHI, wantRH, wantAll):
-        if self.increment < 30:
-            self.increment += 1
-            # giving the sensor time in case it's an issue of ping frequency overwhelming it
-            time.sleep(1)
-            return self.getTemp(useHI=useHI, wantRH=wantRH, wantAll=wantAll)
-
-        # But there should be a limit to the number of times we try in case the sensor is just broken
-        else:
-            if wantAll:
-                return (999, 999, 999)
-            elif wantRH:
-                return (999, 999)
-            else:
-                return 999
-
-    # calculations per: https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
-    def get_heat_index(self, humidityVal, tempVal):
-        HI = 0.5 * (tempVal + 61.0 + ((tempVal - 68.0) * 1.2) + (humidityVal * 0.094))
-
-        if HI < 80:
-            return round(HI)
-
-        else:
-            HI = (
-                -42.379
-                + (2.04901523 * tempVal)
-                + (10.14333127 * humidityVal)
-                - (0.22475541 * tempVal * humidityVal)
-                - (0.00683783 * tempVal ** 2)
-                - (0.05481717 * humidityVal ** 2)
-                + (0.00122874 * tempVal ** 2 * humidityVal)
-                + (0.00085282 * tempVal * humidityVal ** 2)
-                - (0.00000199 * tempVal ** 2 * humidityVal ** 2)
-            )
-
-        if humidityVal > 85 and tempVal in range(80, 85):
-            HI += ((humidityVal - 85) / 10) * ((87 - tempVal) / 5)  # added to HI before returning
-
-        elif humidityVal < 13 and tempVal in range(80, 112):
-            HI -= ((13 - humidityVal) / 4) * math.sqrt((17 - abs(tempVal - 95)) / 17)
-
-        return round(HI)
-
-    # calculations per: https://web.archive.org/web/20200212215746im_/https://www.vaisala.com/en/system/files?file=documents/Humidity_Conversion_Formulas_B210973EN.pdf
-    # which was referenced here: https://earthscience.stackexchange.com/questions/16570/how-to-calculate-relative-humidity-from-temperature-dew-point-and-pressure
-    def getDewPoint(self, useF=True):
-        temp, RH = 999, 999
-
-        while temp == 999 or RH == 999:
-            temp, RH = self.getTemp(useHI=False, wantRH=True, useF=False)
-
-        # first calculate water vapour saturation pressure over water/ice in hPa
-        if temp in range(-70, 0):
-            A, m, Tn = 6.114742, 9.778707, 273.1466
-
-        elif temp in range(0, 51):
-            A, m, Tn = 6.116441, 7.591386, 240.7263
-
-        Pws = A * 10 ** ((m * temp) / (temp + Tn))
-
-        # next derive the water vapour pressure
-        Pw = (Pws * RH) / 100
-        # finally, calculate the dew point
-        Td = Tn / ((m / math.log10(Pw / A)) - 1)
-
-        if useF:
-            # converting c to f
-            Td = (Td * 1.8) + 32
-
-        return round(Td)
-
-    # calculations per: https://www.omnicalculator.com/physics/wet-bulb#how-to-calculate-the-wet-bulb-temperature
-    # which cites this work: https://journals.ametsoc.org/view/journals/apme/50/11/jamc-d-11-0143.1.xml
-    def get_wet_bulb(self, useF=True):
-        temp, RH = 999, 999
-
-        while temp == 999 or RH == 999:
-            temp, RH = self.getTemp(useHI=False, wantRH=True, useF=False)
-
-        WB = round(
-            temp * math.atan(0.151977 * (RH + 8.313659) ** 0.5)
-            + math.atan(temp + RH)
-            - math.atan(RH - 1.676331)
-            + 0.00391838 * (RH) ** (3 / 2) * math.atan(0.023101 * RH)
-            - 4.686035
-        )
-
-        return WB if not useF else self.c_to_f(WB)
+from Classes import Sensor, Thermometer
 
 
 class Thermostat:
-    def __init__(self, targetTemp, internal: Sensor, external: Sensor):
+    def __init__(self, targetTemp, internal: Thermometer, external: Thermometer):
         self.targetTemp = targetTemp
         self.internal = internal
         self.external = external
@@ -613,7 +473,9 @@ class Thermostat:
 
 
 dht11 = Adafruit_DHT.DHT11
-thermo = Thermostat(68, Sensor("Internal Temperature", dht11, 4), Sensor("External Temperature", dht11, 4))
+indoors = Thermometer(Sensor("Internal Temperature", dht11, 17))
+outdoors = Thermometer(Sensor("External Temperature", dht11, 27))
+thermo = Thermostat(68, indoors, outdoors)
 subject = "Confirmation"
 message = f"Process killed, exiting gracefully as of {thermo.currentTime}"
 thermo.sendEmail(subject, message)
