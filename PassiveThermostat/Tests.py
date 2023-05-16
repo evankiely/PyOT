@@ -32,10 +32,10 @@ out_dew_point = outdoors.get_dew_point(out_RH, out_temp)
 
 print(f"INDOORS DEW POINT (C): {in_dew_point}, OUTDOORS DEW POINT (C): {out_dew_point}")
 
-in_dew_point_c = indoors.c_to_f(in_dew_point)
-out_dew_point_c = outdoors.c_to_f(out_dew_point)
+in_dew_point_f = indoors.c_to_f(in_dew_point)
+out_dew_point_f = outdoors.c_to_f(out_dew_point)
 
-print(f"INDOORS DEW POINT (F): {in_dew_point_c}, OUTDOORS DEW POINT (F): {out_dew_point_c}")
+print(f"INDOORS DEW POINT (F): {in_dew_point_f}, OUTDOORS DEW POINT (F): {out_dew_point_f}")
 
 in_wet_bulb = indoors.get_wet_bulb(in_RH, in_temp)
 out_wet_bulb = outdoors.get_wet_bulb(out_RH, out_temp)
@@ -43,6 +43,6 @@ out_wet_bulb = outdoors.get_wet_bulb(out_RH, out_temp)
 print(f"INDOORS WET BULB (C): {in_wet_bulb}, OUTDOORS WET BULB (C): {out_wet_bulb}")
 
 in_wet_bulb_f = indoors.c_to_f(in_wet_bulb)
-out_wet_bulb_f = outdoors.c_to_f(in_wet_bulb)
+out_wet_bulb_f = outdoors.c_to_f(out_wet_bulb)
 
 print(f"INDOORS WET BULB (F): {in_wet_bulb_f}, OUTDOORS WET BULB (F): {out_wet_bulb_f}")
